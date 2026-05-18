@@ -28,19 +28,38 @@
             width: 340px;
         }
 
-        .display {
+        /* 가로 스크롤이 가능하도록 input에서 div 구조로 변경 */
+        .display-container {
             width: 100%;
             height: 90px;
             background-color: #0f172a;
-            border: none;
             border-radius: 15px;
             margin-bottom: 25px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            overflow-x: auto; /* 값이 넘치면 가로 스크롤 생성 */
+            white-space: nowrap; /* 줄바꿈 방지 */
+        }
+
+        /* 스크롤바 디자인 (크롬, 사파리, 웨일 등) */
+        .display-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        .display-container::-webkit-scrollbar-thumb {
+            background-color: #334155;
+            border-radius: 10px;
+        }
+        .display-container::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        .display {
             color: #f8fafc;
             font-size: 2.5rem;
             text-align: right;
-            padding: 15px;
             outline: none;
-            pointer-events: none; /* 사용자가 직접 타이핑하지 못하도록 설정 */
         }
 
         .buttons {
@@ -59,6 +78,7 @@
             transition: all 0.2s ease;
             background-color: #334155;
             color: #f8fafc;
+            user-select: none;
         }
 
         /* 버튼 호버 효과 */
@@ -92,8 +112,10 @@
 <body>
 
     <div class="calculator">
-        <!-- 결과창 -->
-        <input type="text" class="display" id="result" value="0" readonly>
+        <!-- 결과창 (가로 스크롤 지원) -->
+        <div class="display-container" id="display-container">
+            <div class="display" id="result">0</div>
+        </div>
         
         <!-- 버튼 배열 -->
         <div class="buttons">
@@ -123,33 +145,87 @@
 
     <script>
         const display = document.getElementById('result');
+        const container = document.getElementById('display-container');
+
+        // 스크롤을 항상 오른쪽 끝으로 밀어주는 함수
+        function scrollToRight() {
+            setTimeout(() => {
+                container.scrollLeft = container.scrollWidth;
+            }, 10);
+        }
 
         // 입력값 추가
         function appendValue(value) {
-            if (display.value === '0' && value !== '.') {
-                display.value = value;
+            if (display.textContent === '0' && value !== '.') {
+                display.textContent = value;
             } else {
-                display.value += value;
+                display.textContent += value;
             }
+            scrollToRight();
         }
 
         // 화면 초기화 (C 버튼)
         function clearDisplay() {
-            display.value = '0';
+            display.textContent = '0';
+        }
+
+        // 한 글자 지우기 (키보드 Backspace용)
+        function backspace() {
+            if (display.textContent.length > 1) {
+                display.textContent = display.textContent.slice(0, -1);
+            } else {
+                display.textContent = '0';
+            }
         }
 
         // 계산 결과 출력 (= 버튼)
         function calculate() {
             try {
-                // eval 대신 간단한 계산 수행 (보안 및 에러 방지용 예외 처리)
-                if (display.value) {
-                    display.value = eval(display.value);
+                if (display.textContent) {
+                    // 계산식의 연산자 예외 처리 및 계산
+                    let expression = display.textContent;
+                    let result = eval(expression);
+                    
+                    // 소수점이 너무 길어질 경우 처리 (최대 소수점 8자리)
+                    if (result % 1 !== 0) {
+                        result = parseFloat(result.toFixed(8));
+                    }
+                    
+                    display.textContent = result;
                 }
             } catch (error) {
-                display.value = 'Error';
-                setTimeout(clearDisplay, 1500); // 에러 발생 시 1.5초 후 초기화
+                display.textContent = 'Error';
+                setTimeout(clearDisplay, 1500);
             }
+            scrollToRight();
         }
+
+        // ⌨️ 키보드 입력 이벤트 리스너 추가
+        document.addEventListener('keydown', function(event) {
+            const key = event.key;
+
+            // 숫자 및 소수점 체크
+            if ((key >= '0' && key <= '9') || key === '.') {
+                appendValue(key);
+            }
+            // 연산자 체크
+            else if (key === '+' || key === '-' || key === '*' || key === '/') {
+                appendValue(key);
+            }
+            // 엔터키나 느린= 입력 시 계산
+            else if (key === 'Enter' || key === '=') {
+                event.preventDefault(); // 엔터키의 기본 브라우저 행동 방지
+                calculate();
+            }
+            // 백스페이스 누르면 한 글자 삭제
+            else if (key === 'Backspace') {
+                backspace();
+            }
+            // ESC 누르면 전체 초기화
+            else if (key === 'Escape') {
+                clearDisplay();
+            }
+        });
     </script>
 </body>
 </html>
