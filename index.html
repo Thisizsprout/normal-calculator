@@ -28,43 +28,37 @@
             width: 340px;
         }
 
-        /* 🌟 스크롤 영역 설정 보완 */
+        /* 🌟 결과창 바깥 감싸는 틀 (크기 고정) */
         .display-container {
             width: 100%;
             height: 90px;
             background-color: #0f172a;
             border-radius: 15px;
             margin-bottom: 25px;
-            padding: 0 20px;
+            padding: 15px 20px;
             display: flex;
             align-items: center;
-            justify-content: flex-end;
             
-            /* 스크롤 핵심 속성들 */
-            overflow-x: auto;          /* 가로 스크롤 허용 */
-            overflow-y: hidden;        /* 세로 스크롤은 절대 방지 */
-            scroll-behavior: smooth;   /* 스크롤 이동을 부드럽게 */
+            /* 핵심: 내부 요소가 넘치면 가로 스크롤 활성화 */
+            overflow-x: auto;          
+            overflow-y: hidden;        
         }
 
-        /* 얇고 깔끔한 스크롤바 디자인 */
+        /* 스크롤바를 숨겨서 더 깔끔하고 모던한 느낌 주기 (휠이나 드래그는 작동함) */
         .display-container::-webkit-scrollbar {
-            height: 5px;
-        }
-        .display-container::-webkit-scrollbar-thumb {
-            background-color: #475569;
-            border-radius: 10px;
-        }
-        .display-container::-webkit-scrollbar-track {
-            background-color: transparent;
+            display: none; 
         }
 
-        /* 🌟 숫자가 들어가는 텍스트 레이어 */
+        /* 🌟 실제 숫자가 들어가는 텍스트 레이어 */
         .display {
             color: #f8fafc;
-            font-size: 2.5rem;
+            font-size: 2.3rem; /* 긴 숫자 가독성을 위해 살짝 조절 */
+            white-space: nowrap; /* 절대 줄바꿈 되지 않고 옆으로 쭉 늘어남 */
+            width: 100%;
             text-align: right;
-            white-space: nowrap;       /* 숫자가 길어져도 아래로 줄바꿈되지 않음 (가장 중요) */
-            display: inline-block;
+            
+            /* 스크롤 작동을 위해 글자가 늘어날 수 있도록 설정 */
+            display: block; 
         }
 
         .buttons {
@@ -115,7 +109,7 @@
 <body>
 
     <div class="calculator">
-        <!-- 결과창 (가로 스크롤 영역) -->
+        <!-- 결과창 -->
         <div class="display-container" id="display-container">
             <div class="display" id="result">0</div>
         </div>
@@ -150,9 +144,8 @@
         const display = document.getElementById('result');
         const container = document.getElementById('display-container');
 
-        // 🌟 [보완] 스크롤을 실시간으로 가장 오른쪽으로 밀어주는 함수
-        function scrollToRight() {
-            // DOM이 업데이트된 후 정확한 스크롤 폭을 계산하기 위해 requestAnimationFrame 사용
+        // 입력이나 계산 직후 포커스를 오른쪽 끝으로 밀어주는 함수
+        function autoScrollToRight() {
             requestAnimationFrame(() => {
                 container.scrollLeft = container.scrollWidth;
             });
@@ -165,13 +158,13 @@
             } else {
                 display.textContent += value;
             }
-            scrollToRight(); // 값이 입력될 때마다 스크롤 이동
+            autoScrollToRight(); // 입력할 때는 자동으로 최신 숫자가 보이게 우측 정렬
         }
 
         // 화면 초기화
         function clearDisplay() {
             display.textContent = '0';
-            scrollToRight();
+            autoScrollToRight();
         }
 
         // 한 글자 지우기 (Backspace)
@@ -181,7 +174,7 @@
             } else {
                 display.textContent = '0';
             }
-            scrollToRight();
+            autoScrollToRight();
         }
 
         // 계산 결과 출력
@@ -191,18 +184,27 @@
                     let expression = display.textContent;
                     let result = eval(expression);
                     
-                    if (result % 1 !== 0) {
-                        result = parseFloat(result.toFixed(8));
+                    // 지수 표기법(e+) 대신 일반 숫자로 길게 풀어서 보여주기 위한 처리
+                    if (!isNaN(result) && Math.abs(result) >= 1e12) {
+                        display.textContent = BigInt(Math.floor(result)).toString();
+                    } else if (result % 1 !== 0) {
+                        display.textContent = parseFloat(result.toFixed(8));
+                    } else {
+                        display.textContent = result;
                     }
-                    
-                    display.textContent = result;
                 }
             } catch (error) {
                 display.textContent = 'Error';
                 setTimeout(clearDisplay, 1500);
             }
-            scrollToRight();
+            autoScrollToRight(); // 계산 완료 직후에도 일단 전체 결과의 끝부분이 보이도록 정렬
         }
+
+        // 🌟 마우스 휠로도 가로 스크롤이 가능하게 만드는 이벤트
+        container.addEventListener('wheel', (evt) => {
+            evt.preventDefault();
+            container.scrollLeft += evt.deltaY;
+        });
 
         // 키보드 입력 이벤트
         document.addEventListener('keydown', function(event) {
