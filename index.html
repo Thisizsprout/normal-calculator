@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfect Calculator</title>
+    <title>Animated & Perfect Calculator</title>
     <style>
         * {
             margin: 0;
@@ -24,8 +24,9 @@
             background-color: #1e293b;
             padding: 25px;
             border-radius: 30px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* 그림자 더 깊게 */
             width: 340px;
+            overflow: hidden; /* 애니메이션이 넘치지 않도록 */
         }
 
         /* 결과창 프레임 */
@@ -43,6 +44,10 @@
             overflow-x: auto;          
             overflow-y: hidden;        
             cursor: grab; 
+            
+            /* 🌟 부드러운 스크롤 효과 */
+            scroll-behavior: smooth; 
+            transition: background-color 0.3s ease;
         }
         
         .display-container:active {
@@ -54,16 +59,32 @@
             display: none; 
         }
 
-        /* 🌟 흔들림 버그 해결의 핵심 */
+        /* 🌟 흔들림 버그 해결 & 애니메이션의 베이스 */
         .display {
             color: #f8fafc;
             font-size: 2.3rem;
             white-space: nowrap; 
             display: inline-block;
-            
-            /* 자바스크립트 대신 CSS로 자연스러운 우측 정렬 유지 */
             margin-left: auto; 
             text-align: right;
+            position: relative; /* 자식 요소 애니메이션 기준 */
+        }
+
+        /* 🌟 입력 애니메이션 클래스 */
+        @keyframes fadeInSlideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .display span {
+            display: inline-block;
+            animation: fadeInSlideDown 0.2s ease-out forwards;
         }
 
         .buttons {
@@ -79,21 +100,31 @@
             font-size: 1.3rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s ease; /* 🌟 버튼 전체 전환 효과 */
             background-color: #334155;
             color: #f8fafc;
             user-select: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1); /* 버튼 그림자 추가 */
+            position: relative;
+            overflow: hidden;
         }
 
+        /* 🌟 버튼 호버 효과: 살짝 밝아짐 & 올라옴 */
         button:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             filter: brightness(1.2);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
         }
 
+        /* 🌟 버튼 클릭 효과: 살짝 눌림 & 더 밝아짐 */
         button:active {
-            transform: translateY(1px);
+            transform: translateY(1px) scale(0.95); /* scale 추가 */
+            filter: brightness(1.4);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.1s ease; /* 클릭 시 더 빠르게 */
         }
 
+        /* 특수 버튼 스타일 */
         button.operator {
             background-color: #3b82f6; 
             color: white;
@@ -156,29 +187,42 @@
             });
         }
 
+        // 🌟 애니메이션과 함께 값 업데이트
+        function updateDisplayWithAnimation(content) {
+            // 기존 내용을 지우고 애니메이션이 적용된 span으로 감싸서 삽입
+            display.innerHTML = ''; 
+            const span = document.createElement('span');
+            span.textContent = content;
+            display.appendChild(span);
+        }
+
         // 입력값 추가
         function appendValue(value) {
-            if (display.textContent === '0' && value !== '.') {
-                display.textContent = value;
+            let currentContent = display.textContent;
+            if (currentContent === '0' && value !== '.') {
+                currentContent = value;
             } else {
-                display.textContent += value;
+                currentContent += value;
             }
+            updateDisplayWithAnimation(currentContent);
             autoScrollToRight();
         }
 
         // 화면 초기화
         function clearDisplay() {
-            display.textContent = '0';
+            updateDisplayWithAnimation('0');
             autoScrollToRight();
         }
 
         // 한 글자 지우기 (Backspace)
         function backspace() {
-            if (display.textContent.length > 1) {
-                display.textContent = display.textContent.slice(0, -1);
+            let currentContent = display.textContent;
+            if (currentContent.length > 1) {
+                currentContent = currentContent.slice(0, -1);
             } else {
-                display.textContent = '0';
+                currentContent = '0';
             }
+            updateDisplayWithAnimation(currentContent);
             autoScrollToRight();
         }
 
@@ -191,15 +235,15 @@
                     
                     // 큰 숫자 지수 표기법 방지
                     if (!isNaN(result) && Math.abs(result) >= 1e12) {
-                        display.textContent = BigInt(Math.floor(result)).toString();
+                        result = BigInt(Math.floor(result)).toString();
                     } else if (result % 1 !== 0) {
-                        display.textContent = parseFloat(result.toFixed(8));
-                    } else {
-                        display.textContent = result;
+                        result = parseFloat(result.toFixed(8));
                     }
+                    
+                    updateDisplayWithAnimation(result);
                 }
             } catch (error) {
-                display.textContent = 'Error';
+                updateDisplayWithAnimation('Error');
                 setTimeout(clearDisplay, 1500);
             }
             autoScrollToRight();
