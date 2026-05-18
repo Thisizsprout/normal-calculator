@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animated & Perfect Calculator</title>
+    <title>Perfect Animated Calculator</title>
     <style>
         * {
             margin: 0;
@@ -24,9 +24,8 @@
             background-color: #1e293b;
             padding: 25px;
             border-radius: 30px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* 그림자 더 깊게 */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             width: 340px;
-            overflow: hidden; /* 애니메이션이 넘치지 않도록 */
         }
 
         /* 결과창 프레임 */
@@ -39,27 +38,21 @@
             padding: 0 20px;
             display: flex;
             align-items: center;
-            
-            /* 가로 스크롤 및 드래그 설정 */
             overflow-x: auto;          
             overflow-y: hidden;        
             cursor: grab; 
-            
-            /* 🌟 부드러운 스크롤 효과 */
-            scroll-behavior: smooth; 
-            transition: background-color 0.3s ease;
+            scroll-behavior: smooth;
         }
         
         .display-container:active {
             cursor: grabbing;
         }
 
-        /* 스크롤바 감추기 */
         .display-container::-webkit-scrollbar {
             display: none; 
         }
 
-        /* 🌟 흔들림 버그 해결 & 애니메이션의 베이스 */
+        /* 결과창 텍스트 레이어 */
         .display {
             color: #f8fafc;
             font-size: 2.3rem;
@@ -67,24 +60,28 @@
             display: inline-block;
             margin-left: auto; 
             text-align: right;
-            position: relative; /* 자식 요소 애니메이션 기준 */
         }
 
-        /* 🌟 입력 애니메이션 클래스 */
-        @keyframes fadeInSlideDown {
-            from {
+        /* 🌟 핵심: 새로 입력된 '마지막 글자'에만 적용될 애니메이션 */
+        @keyframes popIn {
+            0% {
                 opacity: 0;
-                transform: translateY(-10px);
+                transform: scale(0.7) translateY(-8px);
+                filter: brightness(1.8);
             }
-            to {
+            100% {
                 opacity: 1;
-                transform: translateY(0);
+                transform: scale(1) translateY(0);
+                filter: brightness(1);
             }
         }
 
-        .display span {
+        /* 마지막 글자 전용 클래스 */
+        .last-char {
             display: inline-block;
-            animation: fadeInSlideDown 0.2s ease-out forwards;
+            animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            color: #3b82f6; /* 입력되는 순간 순간적으로 파란빛을 띠게 만듦 (옵션) */
+            transition: color 0.3s ease;
         }
 
         .buttons {
@@ -100,57 +97,37 @@
             font-size: 1.3rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease; /* 🌟 버튼 전체 전환 효과 */
+            transition: all 0.2s ease;
             background-color: #334155;
             color: #f8fafc;
             user-select: none;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1); /* 버튼 그림자 추가 */
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
         }
 
-        /* 🌟 버튼 호버 효과: 살짝 밝아짐 & 올라옴 */
         button:hover {
             transform: translateY(-3px);
             filter: brightness(1.2);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }
 
-        /* 🌟 버튼 클릭 효과: 살짝 눌림 & 더 밝아짐 */
         button:active {
-            transform: translateY(1px) scale(0.95); /* scale 추가 */
+            transform: translateY(1px) scale(0.95);
             filter: brightness(1.4);
-            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-            transition: all 0.1s ease; /* 클릭 시 더 빠르게 */
+            transition: all 0.05s ease;
         }
 
-        /* 특수 버튼 스타일 */
-        button.operator {
-            background-color: #3b82f6; 
-            color: white;
-        }
-
-        button.clear {
-            background-color: #ef4444; 
-            color: white;
-        }
-
-        button.equal {
-            background-color: #10b981; 
-            color: white;
-            grid-column: span 2; 
-        }
+        button.operator { background-color: #3b82f6; color: white; }
+        button.clear { background-color: #ef4444; color: white; }
+        button.equal { background-color: #10b981; color: white; grid-column: span 2; }
     </style>
 </head>
 <body>
 
     <div class="calculator">
-        <!-- 결과창 -->
         <div class="display-container" id="display-container">
             <div class="display" id="result">0</div>
         </div>
         
-        <!-- 버튼 배열 -->
         <div class="buttons">
             <button class="clear" onclick="clearDisplay()">C</button>
             <button class="operator" onclick="appendValue('/')">÷</button>
@@ -179,92 +156,97 @@
     <script>
         const display = document.getElementById('result');
         const container = document.getElementById('display-container');
+        let fullExpression = '0'; // 실제 수식을 저장할 변수
 
-        // 입력이나 계산 직후 포커스를 오른쪽 끝으로 밀어주는 함수
         function autoScrollToRight() {
             requestAnimationFrame(() => {
                 container.scrollLeft = container.scrollWidth;
             });
         }
 
-        // 🌟 애니메이션과 함께 값 업데이트
-        function updateDisplayWithAnimation(content) {
-            // 기존 내용을 지우고 애니메이션이 적용된 span으로 감싸서 삽입
-            display.innerHTML = ''; 
-            const span = document.createElement('span');
-            span.textContent = content;
-            display.appendChild(span);
+        // 🌟 [핵심 변경] 마지막 글자만 분리해서 애니메이션 적용하는 함수
+        function renderDisplay(text, isCalculated = false) {
+            if (text === '0' || text === 'Error' || isCalculated) {
+                // 초기 상태나 에러, 결과 출력 시에는 덩어리로 자연스럽게 출력
+                display.innerHTML = `<span>${text}</span>`;
+                return;
+            }
+
+            // 일반 입력 시: 마지막 글자만 <span class="last-char">로 감싸기
+            const normalPart = text.slice(0, -1);
+            const lastChar = text.slice(-1);
+            
+            // 연산자 기호 가독성 변환 (내부 수식은 *, / 이지만 화면에는 ×, ÷ 로 표시)
+            let viewNormal = normalPart.replace(/\*/g, '×').replace(/\//g, '÷');
+            let viewLast = lastChar.replace(/\*/g, '×').replace(/\//g, '÷');
+
+            display.innerHTML = `${viewNormal}<span class="last-char">${viewLast}</span>`;
+            
+            // 입력 직후 색상이 서서히 원래 흰색으로 돌아오게 처리
+            setTimeout(() => {
+                const span = display.querySelector('.last-char');
+                if(span) span.style.color = '#f8fafc';
+            }, 1500);
         }
 
         // 입력값 추가
         function appendValue(value) {
-            let currentContent = display.textContent;
-            if (currentContent === '0' && value !== '.') {
-                currentContent = value;
+            if (fullExpression === '0' && value !== '.') {
+                fullExpression = value;
             } else {
-                currentContent += value;
+                fullExpression += value;
             }
-            updateDisplayWithAnimation(currentContent);
+            renderDisplay(fullExpression);
             autoScrollToRight();
         }
 
         // 화면 초기화
         function clearDisplay() {
-            updateDisplayWithAnimation('0');
+            fullExpression = '0';
+            renderDisplay(fullExpression);
             autoScrollToRight();
         }
 
-        // 한 글자 지우기 (Backspace)
+        // 한 글자 지우기
         function backspace() {
-            let currentContent = display.textContent;
-            if (currentContent.length > 1) {
-                currentContent = currentContent.slice(0, -1);
+            if (fullExpression.length > 1) {
+                fullExpression = fullExpression.slice(0, -1);
             } else {
-                currentContent = '0';
+                fullExpression = '0';
             }
-            updateDisplayWithAnimation(currentContent);
+            renderDisplay(fullExpression);
             autoScrollToRight();
         }
 
         // 계산 결과 출력
         function calculate() {
             try {
-                if (display.textContent) {
-                    let expression = display.textContent;
-                    let result = eval(expression);
+                if (fullExpression) {
+                    let result = eval(fullExpression);
                     
-                    // 큰 숫자 지수 표기법 방지
                     if (!isNaN(result) && Math.abs(result) >= 1e12) {
-                        result = BigInt(Math.floor(result)).toString();
+                        fullExpression = BigInt(Math.floor(result)).toString();
                     } else if (result % 1 !== 0) {
-                        result = parseFloat(result.toFixed(8));
+                        fullExpression = parseFloat(result.toFixed(8)).toString();
+                    } else {
+                        fullExpression = result.toString();
                     }
                     
-                    updateDisplayWithAnimation(result);
+                    renderDisplay(fullExpression, true); // 계산 결과는 일괄 렌더링
                 }
             } catch (error) {
-                updateDisplayWithAnimation('Error');
+                fullExpression = '0';
+                renderDisplay('Error');
                 setTimeout(clearDisplay, 1500);
             }
             autoScrollToRight();
         }
 
-        // 마우스 휠 스크롤
-        container.addEventListener('wheel', (evt) => {
-            evt.preventDefault();
-            container.scrollLeft += evt.deltaY;
-        });
+        // 마우스 휠 및 드래그 스크롤
+        container.addEventListener('wheel', (evt) => { evt.preventDefault(); container.scrollLeft += evt.deltaY; });
 
-        // 마우스 드래그 스크롤
-        let isDown = false;
-        let startX;
-        let scrollLeft;
-
-        container.addEventListener('mousedown', (e) => {
-            isDown = true;
-            startX = e.pageX - container.offsetLeft;
-            scrollLeft = container.scrollLeft;
-        });
+        let isDown = false, startX, scrollLeft;
+        container.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - container.offsetLeft; scrollLeft = container.scrollLeft; });
         container.addEventListener('mouseleave', () => { isDown = false; });
         container.addEventListener('mouseup', () => { isDown = false; });
         container.addEventListener('mousemove', (e) => {
@@ -275,7 +257,7 @@
             container.scrollLeft = scrollLeft - walk;
         });
 
-        // 키보드 입력 이벤트
+        // 키보드 입력
         document.addEventListener('keydown', function(event) {
             const key = event.key;
             if ((key >= '0' && key <= '9') || key === '.') appendValue(key);
@@ -284,6 +266,9 @@
             else if (key === 'Backspace') backspace();
             else if (key === 'Escape') clearDisplay();
         });
+
+        // 초기화
+        renderDisplay(fullExpression);
     </script>
 </body>
 </html>
