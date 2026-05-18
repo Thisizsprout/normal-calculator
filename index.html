@@ -1,3 +1,155 @@
-<h1>차가 얼마나 많이 다닐까요</h1>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-<p style="color: blue;">그걸 알아봅시다</p>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0f172a; /* 깊은 다크 블루 배경 */
+        }
+
+        .calculator {
+            background-color: #1e293b;
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            width: 340px;
+        }
+
+        .display {
+            width: 100%;
+            height: 90px;
+            background-color: #0f172a;
+            border: none;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            color: #f8fafc;
+            font-size: 2.5rem;
+            text-align: right;
+            padding: 15px;
+            outline: none;
+            pointer-events: none; /* 사용자가 직접 타이핑하지 못하도록 설정 */
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        button {
+            padding: 20px;
+            border-radius: 16px;
+            border: none;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #334155;
+            color: #f8fafc;
+        }
+
+        /* 버튼 호버 효과 */
+        button:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.2);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* 기능 연산자 버튼 스타일 (C, =, /, *, -, +) */
+        button.operator {
+            background-color: #3b82f6; /* 블루 */
+            color: white;
+        }
+
+        button.clear {
+            background-color: #ef4444; /* 레드 */
+            color: white;
+        }
+
+        button.equal {
+            background-color: #10b981; /* 그린 */
+            color: white;
+            grid-column: span 2; /* = 버튼은 두 칸 차지 */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <!-- 결과창 -->
+        <input type="text" class="display" id="result" value="0" readonly>
+        
+        <!-- 버튼 배열 -->
+        <div class="buttons">
+            <button class="clear" onclick="clearDisplay()">C</button>
+            <button class="operator" onclick="appendValue('/')">÷</button>
+            <button class="operator" onclick="appendValue('*')">×</button>
+            <button class="operator" onclick="appendValue('-')">-</button>
+            
+            <button onclick="appendValue('7')">7</button>
+            <button onclick="appendValue('8')">8</button>
+            <button onclick="appendValue('9')">9</button>
+            <button class="operator" onclick="appendValue('+')">+</button>
+            
+            <button onclick="appendValue('4')">4</button>
+            <button onclick="appendValue('5')">5</button>
+            <button onclick="appendValue('6')">6</button>
+            <button onclick="appendValue('.')">.</button>
+            
+            <button onclick="appendValue('1')">1</button>
+            <button onclick="appendValue('2')">2</button>
+            <button onclick="appendValue('3')">3</button>
+            <button onclick="appendValue('0')">0</button>
+            
+            <button class="equal" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('result');
+
+        // 입력값 추가
+        function appendValue(value) {
+            if (display.value === '0' && value !== '.') {
+                display.value = value;
+            } else {
+                display.value += value;
+            }
+        }
+
+        // 화면 초기화 (C 버튼)
+        function clearDisplay() {
+            display.value = '0';
+        }
+
+        // 계산 결과 출력 (= 버튼)
+        function calculate() {
+            try {
+                // eval 대신 간단한 계산 수행 (보안 및 에러 방지용 예외 처리)
+                if (display.value) {
+                    display.value = eval(display.value);
+                }
+            } catch (error) {
+                display.value = 'Error';
+                setTimeout(clearDisplay, 1500); // 에러 발생 시 1.5초 후 초기화
+            }
+        }
+    </script>
+</body>
+</html>
