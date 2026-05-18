@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Calculator</title>
+    <title>Perfect Calculator</title>
     <style>
         * {
             margin: 0;
@@ -28,37 +28,40 @@
             width: 340px;
         }
 
-        /* 🌟 결과창 바깥 감싸는 틀 (크기 고정) */
+        /* 🌟 결과창 프레임 (340px 고정 뷰포트) */
         .display-container {
             width: 100%;
             height: 90px;
             background-color: #0f172a;
             border-radius: 15px;
             margin-bottom: 25px;
-            padding: 15px 20px;
+            padding: 0 20px;
             display: flex;
             align-items: center;
             
-            /* 핵심: 내부 요소가 넘치면 가로 스크롤 활성화 */
+            /* 가로 스크롤 활성화 및 터치/마우스 드래그 준비 */
             overflow-x: auto;          
             overflow-y: hidden;        
+            cursor: grab; /* 마우스로 잡고 끌 수 있다는 표시 */
+        }
+        
+        .display-container:active {
+            cursor: grabbing;
         }
 
-        /* 스크롤바를 숨겨서 더 깔끔하고 모던한 느낌 주기 (휠이나 드래그는 작동함) */
+        /* 스크롤바 감추기 (드래그와 휠로만 깔끔하게 움직이도록) */
         .display-container::-webkit-scrollbar {
             display: none; 
         }
 
-        /* 🌟 실제 숫자가 들어가는 텍스트 레이어 */
+        /* 🌟 스크롤 버그 해결의 핵심 레이어 */
         .display {
             color: #f8fafc;
-            font-size: 2.3rem; /* 긴 숫자 가독성을 위해 살짝 조절 */
-            white-space: nowrap; /* 절대 줄바꿈 되지 않고 옆으로 쭉 늘어남 */
-            width: 100%;
-            text-align: right;
-            
-            /* 스크롤 작동을 위해 글자가 늘어날 수 있도록 설정 */
-            display: block; 
+            font-size: 2.3rem;
+            white-space: nowrap; /* 한 줄로 길게 늘어남 */
+            display: inline-block;
+            padding-left: 200px; /* 초기 상태에서 우측 정렬처럼 보이게 만드는 여백 */
+            transition: padding 0.1s ease;
         }
 
         .buttons {
@@ -144,8 +147,18 @@
         const display = document.getElementById('result');
         const container = document.getElementById('display-container');
 
-        // 입력이나 계산 직후 포커스를 오른쪽 끝으로 밀어주는 함수
+        // 숫자가 늘어남에 따라 시작 패딩을 조절하여 항상 자연스럽게 스크롤되도록 처리
+        function updateLayout() {
+            if (display.scrollWidth > container.clientWidth) {
+                display.style.paddingLeft = '0px';
+            } else {
+                display.style.paddingLeft = (container.clientWidth - display.offsetWidth - 40) + 'px';
+            }
+        }
+
+        // 입력/계산 시 화면을 자동으로 가장 최신(오른쪽)으로 밀어주는 함수
         function autoScrollToRight() {
+            updateLayout();
             requestAnimationFrame(() => {
                 container.scrollLeft = container.scrollWidth;
             });
@@ -158,7 +171,7 @@
             } else {
                 display.textContent += value;
             }
-            autoScrollToRight(); // 입력할 때는 자동으로 최신 숫자가 보이게 우측 정렬
+            autoScrollToRight();
         }
 
         // 화면 초기화
@@ -184,7 +197,7 @@
                     let expression = display.textContent;
                     let result = eval(expression);
                     
-                    // 지수 표기법(e+) 대신 일반 숫자로 길게 풀어서 보여주기 위한 처리
+                    // 지수 표기법(e+)을 깨부수고 무조건 숫자를 다 풀어서 텍스트로 변환
                     if (!isNaN(result) && Math.abs(result) >= 1e12) {
                         display.textContent = BigInt(Math.floor(result)).toString();
                     } else if (result % 1 !== 0) {
@@ -197,36 +210,48 @@
                 display.textContent = 'Error';
                 setTimeout(clearDisplay, 1500);
             }
-            autoScrollToRight(); // 계산 완료 직후에도 일단 전체 결과의 끝부분이 보이도록 정렬
+            autoScrollToRight();
         }
 
-        // 🌟 마우스 휠로도 가로 스크롤이 가능하게 만드는 이벤트
+        // 🌟 1. 마우스 휠 좌우 스크롤 연결
         container.addEventListener('wheel', (evt) => {
             evt.preventDefault();
-            container.scrollLeft += evt.deltaY;
+            container.scrollLeft += evt.deltaY; // 휠을 아래로 굴리면 오른쪽, 위로 굴리면 왼쪽으로 스크롤
         });
+
+        // 🌟 2. 마우스 클릭 후 드래그로 스크롤 넘기기 기능 추가
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        container.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - container.offsetLeft;
+            scrollLeft = container.scrollLeft;
+        });
+        container.addEventListener('mouseleave', () => { isDown = false; });
+        container.addEventListener('mouseup', () => { isDown = false; });
+        container.addEventListener('mousemove', (e) => {
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 1.5; // 드래그 감도 조절
+            container.scrollLeft = scrollLeft - walk;
+        });
+
 
         // 키보드 입력 이벤트
         document.addEventListener('keydown', function(event) {
             const key = event.key;
-
-            if ((key >= '0' && key <= '9') || key === '.') {
-                appendValue(key);
-            }
-            else if (key === '+' || key === '-' || key === '*' || key === '/') {
-                appendValue(key);
-            }
-            else if (key === 'Enter' || key === '=') {
-                event.preventDefault(); 
-                calculate();
-            }
-            else if (key === 'Backspace') {
-                backspace();
-            }
-            else if (key === 'Escape') {
-                clearDisplay();
-            }
+            if ((key >= '0' && key <= '9') || key === '.') appendValue(key);
+            else if (key === '+' || key === '-' || key === '*' || key === '/') appendValue(key);
+            else if (key === 'Enter' || key === '=') { event.preventDefault(); calculate(); }
+            else if (key === 'Backspace') backspace();
+            else if (key === 'Escape') clearDisplay();
         });
+
+        // 초기 레이아웃 정렬 실행
+        window.onload = updateLayout;
     </script>
 </body>
 </html>
